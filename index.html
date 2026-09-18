@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+  <title>Le Mystère du Manuscrit</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+    }
+
+    body {
+      min-height: 100vh;
+      min-height: 100dvh;
+      font-family: Georgia, "Times New Roman", serif;
+      color: #f5e6bd;
+
+      background:
+        radial-gradient(circle at 50% 25%,
+          rgba(119, 77, 32, 0.35),
+          transparent 38%),
+        linear-gradient(
+          rgba(8, 6, 4, 0.88),
+          rgba(8, 5, 3, 0.97)
+        ),
+        #120d08;
+
+      display: flex;
+      justify-content: center;
+      align-items: center;
+
+      padding:
+        max(20px, env(safe-area-inset-top))
+        18px
+        max(25px, env(safe-area-inset-bottom));
+
+      overflow-x: hidden;
+    }
+
+    .page {
+      width: 100%;
+      max-width: 650px;
+      text-align: center;
+    }
+
+    /* -------------------------
+       TITRES
+    ------------------------- */
+
+    .ornement {
+      color: #c59a48;
+      font-size: 20px;
+      letter-spacing: 8px;
+      margin-bottom: 8px;
+    }
+
+    h1 {
+      margin: 0;
+      color: #f3d58c;
+      font-size: clamp(38px, 10vw, 64px);
+      font-weight: normal;
+      letter-spacing: 3px;
+      text-shadow:
+        0 2px 4px #000,
+        0 0 20px rgba(208, 159, 74, 0.15);
+    }
+
+    h2 {
+      margin: 8px 0 25px;
+      font-size: clamp(16px, 4vw, 22px);
+      font-weight: normal;
+      letter-spacing: 3px;
+      color: #d6ba7b;
+    }
+
+    .separator {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 15px auto 22px;
+      max-width: 420px;
+      color: #c79b4b;
+    }
+
+    .separator::before,
+    .separator::after {
+      content: "";
+      height: 1px;
+      background: #9c7436;
+      flex: 1;
+    }
+
+    .instructions {
+      font-size: clamp(17px, 4.5vw, 21px);
+      line-height: 1.5;
+      margin: 0 auto 20px;
+      max-width: 520px;
+      color: #eee2c8;
+    }
+
+    .finger {
+      font-size: 30px;
+      display: block;
+      margin-bottom: 6px;
+      animation: fingerMove 1.5s ease-in-out infinite;
+    }
+
+    @keyframes fingerMove {
+      0%, 100% {
+        transform: translateX(-12px);
+      }
+      50% {
+        transform: translateX(12px);
+      }
+    }
+
+    /* -------------------------
+       CARTE À GRATTER
+    ------------------------- */
+
+    .scratch-wrapper {
+      position: relative;
+      width: min(100%, 520px);
+      aspect-ratio: 4 / 3;
+      margin: 0 auto;
+
+      border: 3px solid #b68b3c;
+      border-radius: 6px;
+
+      box-shadow:
+        0 12px 35px rgba(0, 0, 0, 0.65),
+        0 0 0 1px #4c3517,
+        inset 0 0 30px rgba(0, 0, 0, 0.3);
+
+      overflow: hidden;
+      background: #1c130b;
+
+      /* Important sur mobile */
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    /* Photo du coupable */
+
+    .culprit-photo {
+      position: absolute;
+      inset: 0;
+
+      width: 100%;
+      height: 100%;
+
+      object-fit: cover;
+      object-position: center;
+
+      pointer-events: none;
+    }
+
+    /* Canvas doré */
+
+    #scratchCanvas {
+      position: absolute;
+      inset: 0;
+
+      width: 100%;
+      height: 100%;
+
+      cursor: grab;
+      touch-action: none;
+    }
+
+    #scratchCanvas:active {
+      cursor: grabbing;
+    }
+
+    /* -------------------------
+       TEXTE SOUS LA CARTE
+    ------------------------- */
+
+    .hint {
+      margin-top: 20px;
+      color: #bda77b;
+      font-size: 15px;
+      font-style: italic;
+    }
+
+    .progress-container {
+      width: min(80%, 300px);
+      margin: 18px auto 0;
+    }
+
+    .progress-text {
+      font-size: 13px;
+      color: #a9946d;
+      margin-bottom: 6px;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 5px;
+      border-radius: 20px;
+      overflow: hidden;
+      background: rgba(255,255,255,0.12);
+    }
+
+    .progress {
+      width: 0%;
+      height: 100%;
+      background: #c99a42;
+      transition: width 0.2s ease;
+    }
+
+    /* -------------------------
+       POPUP
+    ------------------------- */
+
+    .popup-overlay {
+      position: fixed;
+      inset: 0;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      padding: 20px;
+
+      background: rgba(0, 0, 0, 0.82);
+      backdrop-filter: blur(5px);
+      -webkit-backdrop-filter: blur(5px);
+
+      opacity: 0;
+      visibility: hidden;
+
+      transition:
+        opacity 0.5s ease,
+        visibility 0.5s ease;
+
+      z-index: 100;
+    }
+
+    .popup-overlay.visible {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .popup {
+      position: relative;
+
+      width: min(100%, 440px);
+
+      padding: 35px 25px 30px;
+
+      color: #3c2916;
+
+      background:
+        radial-gradient(circle at center,
+          #fff9e9,
+          #ead8ad);
+
+      border: 4px double #9e732b;
+      border-radius: 8px;
+
+      box-shadow:
+        0 25px 70px rgba(0, 0, 0, 0.8),
+        inset 0 0 40px rgba(126, 82, 22, 0.15);
+
+      transform: scale(0.75) translateY(30px);
+
+      transition: transform 0.55s cubic-bezier(.2, .9, .3, 1.2);
+    }
+
+    .popup-overlay.visible .popup {
+      transform: scale(1) translateY(0);
+    }
+
+    .popup::before {
+      content: "✦";
+      position: absolute;
+      top: 8px;
+      left: 12px;
+      color: #a87523;
+    }
+
+    .popup::after {
+      content: "✦";
+      position: absolute;
+      top: 8px;
+      right: 12px;
+      color: #a87523;
+    }
+
+    .popup h3 {
+      margin: 0;
+      color: #6e461a;
+      font-size: clamp(38px, 10vw, 52px);
+      font-weight: normal;
+    }
+
+    .popup .subtitle {
+      font-size: 19px;
+      margin: 5px 0 18px;
+    }
+
+    .popup-photo {
+      width: 180px;
+      height: 180px;
+
+      max-width: 55vw;
+      max-height: 55vw;
+
+      object-fit: cover;
+
+      border-radius: 5px;
+      border: 3px solid #b88b3f;
+
+      box-shadow: 0 7px 18px rgba(0,0,0,0.25);
+    }
+
+    .reveal-text {
+      margin: 18px 0 5px;
+      font-size: 19px;
+      line-height: 1.4;
+    }
+
+    .final-message {
+      font-size: 16px;
+      font-style: italic;
+      color: #725630;
+      margin-bottom: 20px;
+    }
+
+    button {
+      border: 2px solid #a47a36;
+      border-radius: 4px;
+
+      background: #641b16;
+      color: #f8df9e;
+
+      padding: 13px 24px;
+
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 16px;
+
+      cursor: pointer;
+
+      box-shadow:
+        inset 0 0 0 2px #40100d,
+        0 4px 10px rgba(0,0,0,0.25);
+    }
+
+    button:active {
+      transform: translateY(1px);
+    }
+
+    /* -------------------------
+       CONFETTIS
+    ------------------------- */
+
+    .confetti {
+      position: fixed;
+      z-index: 200;
+
+      width: 9px;
+      height: 14px;
+
+      pointer-events: none;
+
+      animation: fall 2.8s linear forwards;
+    }
+
+    @keyframes fall {
+      0% {
+        transform:
+          translateY(-30px)
+          rotate(0deg);
+        opacity: 1;
+      }
+
+      100% {
+        transform:
+          translateY(110vh)
+          rotate(720deg);
+        opacity: 0;
+      }
+    }
+
+    /* Accessibilité : moins d'animations */
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <main class="page">
+
+    <div class="ornement">◆ ✦ ◆</div>
+
+    <h1>LE COUPABLE</h1>
+
+    <h2>QUI A VOLÉ LE MANUSCRIT ?</h2>
+
+    <div class="separator">✦</div>
+
+    <p class="instructions">
+      <span class="finger">☝</span>
+      Grattez la zone dorée avec votre doigt<br>
+      pour révéler le visage du coupable…
+    </p>
+
+
+    <!-- CARTE À GRATTER -->
+
+    <div class="scratch-wrapper" id="scratchWrapper">
+
+      <!--
+        CHANGEZ CETTE IMAGE
+        Placez coupable.jpg dans le même dossier
+        que index.html
+      -->
+
+      <img
+        src="coupable.jpg"
+        alt="Le coupable"
+        class="culprit-photo"
+        id="culpritPhoto"
+      >
+
+      <canvas id="scratchCanvas"></canvas>
+
+    </div>
+
+
+    <div class="progress-container">
+
+      <div class="progress-text" id="progressText">
+        La vérité est encore cachée…
+      </div>
+
+      <div class="progress-bar">
+        <div class="progress" id="progress"></div>
+      </div>
+
+    </div>
+
+
+    <p class="hint">
+      Chaque mystère trouve toujours sa lumière…
+    </p>
+
+  </main>
+
+
+  <!-- POPUP FINAL -->
+
+  <div
+    class="popup-overlay"
+    id="popup"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="popupTitle"
+  >
+
+    <div class="popup">
+
+      <h3 id="popupTitle">BRAVO !</h3>
+
+      <p class="subtitle">
+        Vous avez découvert le coupable !
+      </p>
+
+      <img
+        src="coupable.jpg"
+        alt="Portrait du coupable"
+        class="popup-photo"
+      >
+
+      <p class="reveal-text">
+        C'est bien cette personne<br>
+        qui a volé le manuscrit !
+      </p>
+
+      <p class="final-message">
+        L'enquête est résolue.
+      </p>
+
+      <button type="button" id="closePopup">
+        REVOIR LE COUPABLE
+      </button>
+
+    </div>
+
+  </div>
+
+
+  <script>
+
+    /* ========================================
+       CARTE À GRATTER
+       Compatible souris + tactile + stylet
+       ======================================== */
+
+    const canvas = document.getElementById("scratchCanvas");
+    const ctx = canvas.getContext("2d", {
+      willReadFrequently: true
+    });
+
+    const wrapper = document.getElementById("scratchWrapper");
+
+    const popup = document.getElementById("popup");
+    const closePopup = document.getElementById("closePopup");
+
+    const progress = document.getElementById("progress");
+    const progressText = document.getElementById("progressText");
+
+
+    let scratching = false;
+    let completed = false;
+
+    let lastX = null;
+    let lastY = null;
+
+    let checkCounter = 0;
+
+
+    /* ========================================
+       CRÉATION DE LA COUCHE DORÉE
+       ======================================== */
+
+    function createScratchSurface() {
+
+      const rect = wrapper.getBoundingClientRect();
+
+      /*
+        devicePixelRatio permet d'avoir un canvas
+        net sur les écrans Retina iPhone.
+      */
+
+      const ratio = Math.min(
+        window.devicePixelRatio || 1,
+        2
+      );
+
+      canvas.width = Math.round(rect.width * ratio);
+      canvas.height = Math.round(rect.height * ratio);
+
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+
+
+      /* Fond */
+
+      const gradient = ctx.createLinearGradient(
+        0,
+        0,
+        rect.width,
+        rect.height
+      );
+
+      gradient.addColorStop(0, "#7b541b");
+      gradient.addColorStop(0.18, "#d9b45a");
+      gradient.addColorStop(0.40, "#f2d584");
+      gradient.addColorStop(0.62, "#b17b29");
+      gradient.addColorStop(0.82, "#e8c66d");
+      gradient.addColorStop(1, "#765019");
+
+      ctx.globalCompositeOperation = "source-over";
+
+      ctx.fillStyle = gradient;
+
+      ctx.fillRect(
+        0,
+        0,
+        rect.width,
+        rect.height
+      );
+
+
+      /*
+        Petites taches aléatoires pour donner
+        un aspect métallique / parchemin.
+      */
+
+      for (let i = 0; i < 450; i++) {
+
+        const x = Math.random() * rect.width;
+        const y = Math.random() * rect.height;
+
+        const radius = Math.random() * 1.8 + 0.3;
+
+        ctx.beginPath();
+
+        ctx.fillStyle =
+          Math.random() > 0.5
+            ? "rgba(255,255,220,0.20)"
+            : "rgba(70,35,5,0.18)";
+
+        ctx.arc(
+          x,
+          y,
+          radius,
+          0,
+          Math.PI * 2
+        );
+
+        ctx.fill();
+      }
+
+
+      /* Cadre intérieur */
+
+      ctx.strokeStyle = "rgba(76,45,10,0.65)";
+      ctx.lineWidth = 2;
+
+      ctx.strokeRect(
+        12,
+        12,
+        rect.width - 24,
+        rect.height - 24
+      );
+
+
+      /* Texte central */
+
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+
+      ctx.fillStyle = "#493013";
+
+      ctx.font =
+        "bold " +
+        Math.max(22, rect.width * 0.06) +
+        "px Georgia";
+
+      ctx.fillText(
+        "GRATTEZ ICI",
+        rect.width / 2,
+        rect.height / 2 - 12
+      );
+
+
+      ctx.font =
+        Math.max(12, rect.width * 0.03) +
+        "px Georgia";
+
+      ctx.fillText(
+        "POUR RÉVÉLER LA VÉRITÉ",
+        rect.width / 2,
+        rect.height / 2 + 25
+      );
+
+    }
+
+
+    /* ========================================
+       POSITION DU DOIGT / SOURIS
+       ======================================== */
+
+    function getPosition(event) {
+
+      const rect = canvas.getBoundingClientRect();
+
+      return {
+
+        x:
+          (event.clientX - rect.left) *
+          (canvas.width /
+            (window.devicePixelRatio || 1)) /
+          rect.width,
+
+        y:
+          (event.clientY - rect.top) *
+          (canvas.height /
+            (window.devicePixelRatio || 1)) /
+          rect.height
+
+      };
+
+    }
+
+
+    /* ========================================
+       EFFET DE GRATTAGE
+       ======================================== */
+
+    function scratch(x, y) {
+
+      const rect = canvas.getBoundingClientRect();
+
+      /*
+        Taille du doigt.
+        Plus la carte est large,
+        plus le pinceau est grand.
+      */
+
+      const radius = Math.max(
+        24,
+        Math.min(42, rect.width * 0.085)
+      );
+
+
+      ctx.globalCompositeOperation = "destination-out";
+
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+
+      ctx.lineWidth = radius * 2;
+
+
+      if (lastX !== null && lastY !== null) {
+
+        ctx.beginPath();
+
+        ctx.moveTo(lastX, lastY);
+
+        ctx.lineTo(x, y);
+
+        ctx.stroke();
+
+      }
+
+
+      ctx.beginPath();
+
+      ctx.arc(
+        x,
+        y,
+        radius,
+        0,
+        Math.PI * 2
+      );
+
+      ctx.fill();
+
+
+      lastX = x;
+      lastY = y;
+
+
+      /*
+        On ne calcule pas le pourcentage
+        à chaque pixel pour conserver
+        de bonnes performances sur mobile.
+      */
+
+      checkCounter++;
+
+      if (checkCounter % 8 === 0) {
+        calculateScratchPercentage();
+      }
+
+    }
+
+
+    /* ========================================
+       ÉVÉNEMENTS POINTER
+       ======================================== */
+
+    canvas.addEventListener(
+      "pointerdown",
+      function(event) {
+
+        if (completed) return;
+
+        event.preventDefault();
+
+        scratching = true;
+
+        lastX = null;
+        lastY = null;
+
+        canvas.setPointerCapture(event.pointerId);
+
+        const pos = getPosition(event);
+
+        scratch(pos.x, pos.y);
+
+      }
+    );
+
+
+    canvas.addEventListener(
+      "pointermove",
+      function(event) {
+
+        if (!scratching || completed) return;
+
+        event.preventDefault();
+
+        const pos = getPosition(event);
+
+        scratch(pos.x, pos.y);
+
+      }
+    );
+
+
+    function stopScratch(event) {
+
+      scratching = false;
+
+      lastX = null;
+      lastY = null;
+
+      calculateScratchPercentage();
+
+    }
+
+
+    canvas.addEventListener(
+      "pointerup",
+      stopScratch
+    );
+
+    canvas.addEventListener(
+      "pointercancel",
+      stopScratch
+    );
+
+
+    /* ========================================
+       POURCENTAGE GRATTÉ
+       ======================================== */
+
+    function calculateScratchPercentage() {
+
+      if (completed) return;
+
+      const imageData = ctx.getImageData(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+      );
+
+      const pixels = imageData.data;
+
+      let transparent = 0;
+      let total = 0;
+
+
+      /*
+        On analyse seulement un pixel sur 16
+        pour améliorer les performances.
+      */
+
+      for (
+        let i = 3;
+        i < pixels.length;
+        i += 4 * 16
+      ) {
+
+        total++;
+
+        if (pixels[i] < 50) {
+          transparent++;
+        }
+
+      }
+
+
+      const percentage =
+        Math.round(
+          (transparent / total) * 100
+        );
+
+
+      progress.style.width =
+        Math.min(percentage, 100) + "%";
+
+
+      if (percentage < 15) {
+
+        progressText.textContent =
+          "La vérité est encore cachée…";
+
+      }
+
+      else if (percentage < 35) {
+
+        progressText.textContent =
+          "Continuez à gratter…";
+
+      }
+
+      else if (percentage < 55) {
+
+        progressText.textContent =
+          "Vous y êtes presque…";
+
+      }
+
+
+      /*
+        À 55 %, on considère que
+        la carte est suffisamment grattée.
+      */
+
+      if (percentage >= 55) {
+        finishScratch();
+      }
+
+    }
+
+
+    /* ========================================
+       FIN DU JEU
+       ======================================== */
+
+    function finishScratch() {
+
+      if (completed) return;
+
+      completed = true;
+
+
+      /*
+        On fait disparaître doucement
+        le reste de la couche dorée.
+      */
+
+      canvas.style.transition =
+        "opacity 0.8s ease";
+
+      canvas.style.opacity = "0";
+
+      progress.style.width = "100%";
+
+      progressText.textContent =
+        "Le coupable est démasqué !";
+
+
+      setTimeout(function() {
+
+        popup.classList.add("visible");
+
+        createConfetti();
+
+      }, 1000);
+
+    }
+
+
+    /* ========================================
+       CONFETTIS
+       ======================================== */
+
+    function createConfetti() {
+
+      const colors = [
+        "#d4a536",
+        "#f2d379",
+        "#7e1712",
+        "#fff0bd"
+      ];
+
+
+      for (let i = 0; i < 45; i++) {
+
+        const piece =
+          document.createElement("div");
+
+        piece.className = "confetti";
+
+        piece.style.left =
+          Math.random() * 100 + "vw";
+
+        piece.style.top =
+          "-20px";
+
+        piece.style.background =
+          colors[
+            Math.floor(
+              Math.random() * colors.length
+            )
+          ];
+
+        piece.style.animationDelay =
+          Math.random() * 0.7 + "s";
+
+        piece.style.animationDuration =
+          (2 + Math.random() * 1.5) + "s";
+
+        document.body.appendChild(piece);
+
+
+        setTimeout(function() {
+          piece.remove();
+        }, 4500);
+
+      }
+
+    }
+
+
+    /* ========================================
+       FERMETURE DU POPUP
+       ======================================== */
+
+    closePopup.addEventListener(
+      "click",
+      function() {
+
+        popup.classList.remove("visible");
+
+      }
+    );
+
+
+    /* ========================================
+       INITIALISATION
+       ======================================== */
+
+    createScratchSurface();
+
+
+    /*
+      Si l'écran change d'orientation
+      AVANT que le jeu soit terminé,
+      on recrée la surface.
+    */
+
+    let resizeTimer;
+
+    window.addEventListener(
+      "resize",
+      function() {
+
+        if (completed) return;
+
+        clearTimeout(resizeTimer);
+
+        resizeTimer = setTimeout(
+          createScratchSurface,
+          250
+        );
+
+      }
+    );
+
+  </script>
+
+</body>
+</html>
